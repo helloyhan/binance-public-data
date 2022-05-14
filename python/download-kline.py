@@ -90,6 +90,17 @@ def download_daily_klines(trading_type, symbols, num_symbols, intervals, dates, 
 
     current += 1
 
+def screenSymbols( symbols ):
+  r = []
+  for sym in symbols:
+    if 'BULLUSDT' in sym or 'BEARUSDT' in sym or 'UPUSDT' in sym or 'DOWNUSDT' in sym:
+      continue
+    
+    if sym.endswith( 'USDT' ):
+      r.append( sym )
+  
+  return sorted( r )
+
 if __name__ == "__main__":
     parser = get_parser('klines')
     args = parser.parse_args(sys.argv[1:])
@@ -97,7 +108,9 @@ if __name__ == "__main__":
     if not args.symbols:
       print("fetching all symbols from exchange")
       symbols = get_all_symbols(args.type)
+      symbols = screenSymbols( symbols )
       num_symbols = len(symbols)
+      print( 'Number of symbols to download:{:d}'.format( num_symbols ) )
     else:
       symbols = args.symbols
       num_symbols = len(symbols)
@@ -107,6 +120,7 @@ if __name__ == "__main__":
     else:
       dates = pd.date_range(end = datetime.today(), periods = MAX_DAYS).to_pydatetime().tolist()
       dates = [date.strftime("%Y-%m-%d") for date in dates]
-      download_monthly_klines(args.type, symbols, num_symbols, args.intervals, args.years, args.months, args.startDate, args.endDate, args.folder, args.checksum)
+      if args.downloadMonthData:
+        download_monthly_klines(args.type, symbols, num_symbols, args.intervals, args.years, args.months, args.startDate, args.endDate, args.folder, args.checksum)
     download_daily_klines(args.type, symbols, num_symbols, args.intervals, dates, args.startDate, args.endDate, args.folder, args.checksum)
 

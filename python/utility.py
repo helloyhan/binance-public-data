@@ -1,4 +1,7 @@
 import os, sys, re, shutil
+sys.path.append( './../../../')
+from util import retry
+
 import json
 from pathlib import Path
 from datetime import *
@@ -8,8 +11,9 @@ from enums import *
 
 def get_destination_dir(file_url, folder=None):
   store_directory = os.environ.get('STORE_DIRECTORY')
+  file_url = os.path.realpath( file_url )
   if folder:
-    store_directory = folder
+    store_directory = os.path.dirname(os.path.realpath( folder ))
   if not store_directory:
     store_directory = os.path.dirname(os.path.realpath(__file__))
   return os.path.join(store_directory, file_url)
@@ -30,9 +34,9 @@ def download_file(base_path, file_name, date_range=None, folder=None):
   download_path = "{}{}".format(base_path, file_name)
   if folder:
     base_path = os.path.join(folder, base_path)
-  if date_range:
-    date_range = date_range.replace(" ","_")
-    base_path = os.path.join(base_path, date_range)
+  # if date_range:
+  #   date_range = date_range.replace(" ","_")
+  #   base_path = os.path.join(base_path, date_range)
   save_path = get_destination_dir(os.path.join(base_path, file_name), folder)
   
 
@@ -47,6 +51,7 @@ def download_file(base_path, file_name, date_range=None, folder=None):
   try:
     download_url = get_download_url(download_path)
     dl_file = urllib.request.urlopen(download_url)
+    # dl_file = retry( urllib.request.urlopen, maxTries=10, kwargs={'url': download_url }, interval=1 )
     length = dl_file.getheader('content-length')
     if length:
       length = int(length)
@@ -67,7 +72,8 @@ def download_file(base_path, file_name, date_range=None, folder=None):
 
   except urllib.error.HTTPError:
     print("\nFile not found: {}".format(download_url))
-    pass
+  except:
+    dl_file = retry( urllib.request.urlopen, maxTries=10, kwargs={'url': download_url }, interval=1 )
 
 def convert_to_date_object(d):
   year, month, day = [int(x) for x in d.split('-')]
@@ -88,7 +94,8 @@ def match_date_regex(arg_value, pat=re.compile(r'\d{4}-\d{2}-\d{2}')):
 def check_directory(arg_value):
   if os.path.exists(arg_value):
     while True:
-      option = input('Folder already exists! Do you want to overwrite it? y/n  ')
+      # option = input('Folder already exists! Do you want to overwrite it? y/n  ')
+      option = 'n'
       if option != 'y' and option != 'n':
         print('Invalid Option!')
         continue
@@ -143,7 +150,9 @@ def get_parser(parser_type):
     parser.add_argument(
       '-i', dest='intervals', default=INTERVALS, nargs='+', choices=INTERVALS,
       help='single kline interval or multiple intervals separated by space\n-i 1m 1w means to download klines interval of 1minute and 1week')
-
+    parser.add_argument('-M', dest='downloadMonthData', default=1, type=int, choices=[0, 1],
+        help="1 to donwload monthly file, default 1"
+        )
 
   return parser
 
